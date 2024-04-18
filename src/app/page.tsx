@@ -1,95 +1,131 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+import { ChangeEvent, useEffect, useState, FormEvent } from "react";
 
-export default function Home() {
+type Expense = {
+  id: number;
+  name: string;
+  cost: number;
+};
+
+const getExpenses = async (): Promise<Expense[]> => {
+  const res = await fetch("http://localhost:3001/api/expenses");
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch data");
+  }
+
+  const response = await res.json();
+  console.log(response);
+  return response;
+};
+
+const addExpense = async (expense: Expense): Promise<Expense[]> => {
+  const res = await fetch("http://localhost:3001/api/create-expense", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(expense),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to add expense");
+  }
+
+  const response = await res.json();
+  console.log(response);
+  return response;
+};
+
+const deleteExpense = async (id: number): Promise<Expense[]> => {
+  const res = await fetch(`http://localhost:3001/api/delete-expense/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to delete expense");
+  }
+
+  const response = await res.json();
+  console.log(response);
+  return response;
+};
+
+const Expenses = () => {
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [name, setName] = useState("");
+  const [cost, setCost] = useState("");
+
+  const fetchExpenses = async () => {
+    const fetchedExpenses = await getExpenses();
+    setExpenses(fetchedExpenses);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    await addExpense({
+      name,
+      cost: Number(cost),
+      id: 0,
+    });
+    setName("");
+    setCost("");
+    fetchExpenses();
+  };
+
+  const handleDelete = async (id: number) => {
+    await deleteExpense(id);
+    fetchExpenses();
+  };
+
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
+
+  if (!expenses.length) {
+    return <p>Loading...</p>;
+  }
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+    <div className="container">
+      <div className="form-container">
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Expense name"
+            required
+          />
+          <input
+            type="number"
+            value={cost}
+            onChange={(e) => setCost(e.target.value)}
+            placeholder="Cost"
+            required
+          />
+          <button type="submit">Add Expense</button>
+        </form>
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
+      <div className="expenses-container">
+        {expenses.map((expense) => (
+          <div className="expense-container" key={expense.id}>
+            <button
+              className="delete-button"
+              onClick={() => handleDelete(expense.id)}
+            >
+              X
+            </button>
+            <h2>{expense.name}</h2>
+            <p>Cost: {expense.cost}</p>
+          </div>
+        ))}
       </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
   );
-}
+};
+
+export default Expenses;
